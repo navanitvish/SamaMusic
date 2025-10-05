@@ -38,9 +38,9 @@ const MusicList = () => {
   const [playingId, setPlayingId] = useState(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [selectedFilter, setSelectedFilter] = useState('all')
+  const [selectedCategory, setSelectedCategory] = useState('album')
   const [selectedTracks, setSelectedTracks] = useState([])
 
-  // Enhanced dummy data
   const dummyMusic = [
     {
       id: 1,
@@ -118,11 +118,15 @@ const MusicList = () => {
     )
 
     if (selectedFilter !== 'all') {
-      filtered = filtered.filter(music => music.genre.toLowerCase() === selectedFilter.toLowerCase())
+      if (selectedCategory === 'album') {
+        filtered = filtered.filter(music => music.album.toLowerCase() === selectedFilter.toLowerCase())
+      } else {
+        filtered = filtered.filter(music => music.genre.toLowerCase() === selectedFilter.toLowerCase())
+      }
     }
 
     setFilteredMusic(filtered)
-  }, [searchTerm, musicList, selectedFilter])
+  }, [searchTerm, musicList, selectedFilter, selectedCategory])
 
   const handlePlay = (musicId) => {
     setPlayingId(playingId === musicId ? null : musicId)
@@ -171,20 +175,23 @@ const MusicList = () => {
     return colors[genre] || 'from-gray-500 to-slate-500'
   }
 
-  const uniqueGenres = [...new Set(musicList.map(music => music.genre))]
+  const uniqueCategories = selectedCategory === 'album' 
+    ? [...new Set(musicList.map(music => music.album))]
+    : [...new Set(musicList.map(music => music.genre))]
   
   const filters = [
     { value: 'all', label: 'All Tracks', count: musicList.length },
-    ...uniqueGenres.map(genre => ({
-      value: genre.toLowerCase(),
-      label: genre,
-      count: musicList.filter(m => m.genre === genre).length
+    ...uniqueCategories.map(category => ({
+      value: category.toLowerCase(),
+      label: category,
+      count: musicList.filter(m => 
+        selectedCategory === 'album' ? m.album === category : m.genre === category
+      ).length
     }))
   ]
 
   return (
     <div className="space-y-8 p-6 bg-gray-50 min-h-screen">
-      {/* Header Section */}
       <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 rounded-3xl p-8 text-white">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative z-10">
@@ -228,8 +235,38 @@ const MusicList = () => {
         <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
       </div>
 
-      {/* Filters and Search */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
+            <button
+              onClick={() => {
+                setSelectedCategory('album')
+                setSelectedFilter('all')
+              }}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                selectedCategory === 'album'
+                  ? 'bg-white text-purple-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              By Album
+            </button>
+            <button
+              onClick={() => {
+                setSelectedCategory('genre')
+                setSelectedFilter('all')
+              }}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                selectedCategory === 'genre'
+                  ? 'bg-white text-purple-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              By Genre
+            </button>
+          </div>
+        </div>
+
         <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between mb-6">
           <div className="flex items-center gap-3 overflow-x-auto pb-2">
             {filters.map((filter) => (
@@ -273,7 +310,6 @@ const MusicList = () => {
           </div>
         </div>
 
-        {/* Selected Tracks Actions */}
         {selectedTracks.length > 0 && (
           <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
             <div className="flex items-center justify-between">
@@ -294,7 +330,6 @@ const MusicList = () => {
           </div>
         )}
 
-        {/* Music Table */}
         <div className="overflow-hidden rounded-xl border border-gray-200">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -403,23 +438,10 @@ const MusicList = () => {
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end gap-1 ">
-                        {/* <button 
-                          onClick={() => handlePlay(music.id)}
-                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        >
-                          {playingId === music.id ? (
-                            <Pause className="h-4 w-4" />
-                          ) : (
-                            <Play className="h-4 w-4" />
-                          )}
-                        </button> */}
+                      <div className="flex items-center justify-end gap-1">
                         <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                           <Eye className="h-4 w-4" />
                         </button>
-                        {/* <button className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors">
-                          <Download className="h-4 w-4" />
-                        </button> */}
                         <button className="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors">
                           <Edit className="h-4 w-4" />
                         </button>
@@ -429,9 +451,6 @@ const MusicList = () => {
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
-                        {/* <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                          <MoreVertical className="h-4 w-4" />
-                        </button> */}
                       </div>
                     </td>
                   </tr>
@@ -441,7 +460,6 @@ const MusicList = () => {
           </div>
         </div>
 
-        {/* Empty State */}
         {filteredMusic.length === 0 && (
           <div className="text-center py-12">
             <Music className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -458,82 +476,6 @@ const MusicList = () => {
         )}
       </div>
 
-      {/* Bottom Statistics */}
-      {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
-              <Music className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">Total Tracks</h4>
-              <p className="text-sm text-gray-600">In library</p>
-            </div>
-          </div>
-          <div className="text-3xl font-bold text-gray-900 mb-2">{musicList.length}</div>
-          <div className="flex items-center gap-2 text-sm text-green-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>+{Math.floor(musicList.length * 0.12)} this month</span>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-200">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-              <Headphones className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">Total Plays</h4>
-              <p className="text-sm text-gray-600">All time</p>
-            </div>
-          </div>
-          <div className="text-3xl font-bold text-gray-900 mb-2">
-            {(musicList.reduce((acc, music) => acc + music.plays, 0) / 1000).toFixed(1)}K
-          </div>
-          <div className="flex items-center gap-2 text-sm text-green-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>+18.2% from last month</span>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-200">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center">
-              <Heart className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">Total Likes</h4>
-              <p className="text-sm text-gray-600">Engagement</p>
-            </div>
-          </div>
-          <div className="text-3xl font-bold text-gray-900 mb-2">
-            {(musicList.reduce((acc, music) => acc + music.likes, 0) / 1000).toFixed(1)}K
-          </div>
-          <div className="flex items-center gap-2 text-sm text-green-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>+24.7% engagement</span>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-6 border border-orange-200">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">Top Genre</h4>
-              <p className="text-sm text-gray-600">Most popular</p>
-            </div>
-          </div>
-         
-          <div className="flex items-center gap-2 text-sm text-green-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>Most streamed</span>
-          </div>
-        </div>
-      </div> */}
-
-      {/* Add Music Modal */}
       <AddMusic 
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}

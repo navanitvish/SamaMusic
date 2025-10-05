@@ -11,6 +11,8 @@ import ProtectedRoute from './components/common/ProtectedRoute'
 import LoadingSpinner from './components/common/LoadingSpinner'
 import MainLayout from './components/layouts/MainLayout'
 import MusicList from './pages/music/MusicList'
+import ManageSubscriptions from './pages/subscribe/ManageSubscriptions'
+import ManageCategories from './pages/categories/ManageCategories'
 
 function App() {
   const { isLoading } = useSelector((state) => state.auth)
@@ -33,6 +35,10 @@ function App() {
         <Route path="users" element={<UserList />} />
         <Route path="users/profile" element={<UserProfile />} />
         <Route path="music" element={<MusicList />} />
+        {/* Add other routes here */}
+        <Route path='/categories' element={<ManageCategories/>} />
+
+        <Route path='/subscriptions' element={<ManageSubscriptions />} />
      
       </Route>
       

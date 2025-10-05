@@ -33,6 +33,14 @@ const navigation = [
     gradient: 'from-purple-500 to-pink-500',
     description: 'Manage Users'
   },
+  // catgeoryies
+  { 
+    name: 'Categories',
+    href: '/categories',
+    icon: BarChart3,
+    gradient: 'from-yellow-500 to-orange-500',
+    description: 'Music Categories'
+  },
   { 
     name: 'Music Library', 
     href: '/music', 
@@ -40,6 +48,16 @@ const navigation = [
     gradient: 'from-emerald-500 to-teal-500',
     description: 'Browse Tracks'
   },
+
+
+  {
+    name:'Subscriptions',
+    href:'/subscriptions',
+    icon: Disc3,
+    gradient: 'from-pink-500 to-rose-500',
+    description: 'User Plans'
+  }
+
  
  
  

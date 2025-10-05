@@ -1,6 +1,37 @@
-import { useState } from 'react'
-import { X, Upload, Music, User, Tag, Clock, Calendar, FileAudio, Sparkles } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { 
+  Search, 
+  Plus, 
+  Play, 
+  Pause, 
+  Download, 
+  Trash2, 
+  Edit, 
+  Filter,
+  Music,
+  Volume2,
+  Shuffle,
+  Repeat,
+  MoreVertical,
+  Heart,
+  Share2,
+  Disc,
+  Headphones,
+  TrendingUp,
+  Clock,
+  Users,
+  Star,
+  X,
+  Eye,
+  Upload,
+  User,
+  Tag,
+  Calendar,
+  FileAudio,
+  Sparkles
+} from 'lucide-react'
 
+// AddMusic Component
 const AddMusic = ({ isOpen, onClose, onAddMusic }) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -70,7 +101,6 @@ const AddMusic = ({ isOpen, onClose, onAddMusic }) => {
       return
     }
     
-    // Convert duration from MM:SS to seconds
     const [minutes, seconds] = formData.duration.split(':').map(Number)
     const durationInSeconds = (minutes * 60) + (seconds || 0)
     
@@ -78,16 +108,17 @@ const AddMusic = ({ isOpen, onClose, onAddMusic }) => {
       id: Date.now(),
       title: formData.title,
       artist: formData.artist,
-      album: formData.album,
+      album: formData.album || 'Unknown Album',
       genre: formData.genre,
       duration: durationInSeconds,
       uploadDate: new Date().toISOString(),
+      plays: 0,
+      likes: 0,
       fileName: formData.file?.name || 'Unknown File'
     }
     
     onAddMusic(newMusic)
     
-    // Reset form
     setFormData({
       title: '',
       artist: '',
@@ -113,15 +144,12 @@ const AddMusic = ({ isOpen, onClose, onAddMusic }) => {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        {/* Background overlay */}
         <div 
-          className="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-sm"
+          className=" inset-0 transition-opacity bg-black/60 "
           onClick={onClose}
         ></div>
 
-        {/* Modal */}
         <div className="inline-block w-full max-w-2xl my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-3xl">
-          {/* Header */}
           <div className="relative overflow-hidden bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 px-8 py-6">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="relative z-10 flex items-center justify-between text-white">
@@ -142,13 +170,11 @@ const AddMusic = ({ isOpen, onClose, onAddMusic }) => {
               </button>
             </div>
             
-            {/* Floating elements */}
             <div className="absolute -top-4 -right-4 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
             <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
           </div>
 
           <div className="p-8 space-y-6">
-            {/* File Upload Area */}
             <div className="space-y-4">
               <label className="block text-sm font-semibold text-gray-900">
                 <FileAudio className="inline h-4 w-4 mr-2" />
@@ -199,9 +225,7 @@ const AddMusic = ({ isOpen, onClose, onAddMusic }) => {
               </div>
             </div>
 
-            {/* Form Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Title */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-900">
                   <Music className="inline h-4 w-4 mr-2" />
@@ -217,7 +241,6 @@ const AddMusic = ({ isOpen, onClose, onAddMusic }) => {
                 />
               </div>
 
-              {/* Artist */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-900">
                   <User className="inline h-4 w-4 mr-2" />
@@ -233,7 +256,6 @@ const AddMusic = ({ isOpen, onClose, onAddMusic }) => {
                 />
               </div>
 
-              {/* Album */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-900">
                   <Calendar className="inline h-4 w-4 mr-2" />
@@ -249,7 +271,6 @@ const AddMusic = ({ isOpen, onClose, onAddMusic }) => {
                 />
               </div>
 
-              {/* Duration */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-900">
                   <Clock className="inline h-4 w-4 mr-2" />
@@ -266,11 +287,10 @@ const AddMusic = ({ isOpen, onClose, onAddMusic }) => {
               </div>
             </div>
 
-            {/* Genre */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-900">
                 <Tag className="inline h-4 w-4 mr-2" />
-                Genre *
+                Category *
               </label>
               <select
                 name="genre"
@@ -285,7 +305,6 @@ const AddMusic = ({ isOpen, onClose, onAddMusic }) => {
               </select>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200">
               <button
                 type="button"
@@ -311,3 +330,5 @@ const AddMusic = ({ isOpen, onClose, onAddMusic }) => {
 }
 
 export default AddMusic
+
+// Main MusicList Component
