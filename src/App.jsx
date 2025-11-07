@@ -13,6 +13,8 @@ import MainLayout from './components/layouts/MainLayout'
 import MusicList from './pages/music/MusicList'
 import ManageSubscriptions from './pages/subscribe/ManageSubscriptions'
 import ManageCategories from './pages/categories/ManageCategories'
+import ManageSubcategories from './pages/subcategory/SubCategory'
+import AlbumManagement from './pages/album/AlbumManagement'
 
 function App() {
   const { isLoading } = useSelector((state) => state.auth)
@@ -35,8 +37,13 @@ function App() {
         <Route path="users" element={<UserList />} />
         <Route path="users/profile" element={<UserProfile />} />
         <Route path="music" element={<MusicList />} />
+         <Route path="albums" element={<AlbumManagement />} />
+
+
         {/* Add other routes here */}
         <Route path='/categories' element={<ManageCategories/>} />
+        {/* SUBCatgeerory */}
+        <Route path='/subCategories' element={<ManageSubcategories/>} />
 
         <Route path='/subscriptions' element={<ManageSubscriptions />} />
      

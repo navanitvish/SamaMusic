@@ -41,6 +41,23 @@ const navigation = [
     gradient: 'from-yellow-500 to-orange-500',
     description: 'Music Categories'
   },
+  // SubCategory
+  { 
+    name: 'Subcategories',
+    href: '/subcategories',
+    icon: Settings2,
+    gradient: 'from-green-500 to-lime-500',
+    description: 'Music Subcategories'
+
+  },
+
+  {
+    name: 'Albums',
+    href: '/albums',
+    icon: Upload,
+    gradient: 'from-indigo-500 to-violet-500',
+    description: 'albums & tracks'
+  },
   { 
     name: 'Music Library', 
     href: '/music', 

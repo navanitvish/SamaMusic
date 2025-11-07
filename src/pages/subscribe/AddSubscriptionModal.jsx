@@ -1,61 +1,60 @@
-import { useState } from 'react'
+// ==================== 4. AddSubscriptionModal.jsx (FULL REWRITE) ====================
+
+import { useState, useEffect } from 'react'
 import { 
-  CreditCard, 
-  Calendar, 
-  DollarSign, 
-  TrendingUp, 
-  Users, 
-  Plus,
-  MoreVertical,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Edit,
-  Trash2,
-  Download,
-  Search,
-  Filter,
   X,
-  Eye,
-  AlertCircle,
-  RefreshCw,
-  Zap,
   Crown,
-  Shield,
-  Star,
-  Mail,
-  User,
+  DollarSign,
+  Calendar,
   Tag,
-  Sparkles
+  Sparkles,
+  Plus,
+  Trash2,
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react'
 
-// Add Subscription Modal Component
-const AddSubscriptionModal = ({ isOpen, onClose, onAddSubscription }) => {
+const AddSubscriptionModal = ({ isOpen, onClose, onSave, editingPlan, loading }) => {
   const [formData, setFormData] = useState({
-    userName: '',
-    email: '',
-    planName: '',
-    tier: '',
+    name: '',
+    description: '',
     price: '',
-    billingCycle: 'monthly',
-    autoRenew: true,
-    startDate: new Date().toISOString().split('T')[0]
+    type: 'monthly',
+    benefits: [''],
+    limitations: [''],
+    isActive: true
   })
 
-  const plans = {
-    basic: [
-      { name: 'Basic Stream', price: 9.99 },
-      { name: 'Student Plan', price: 4.99 }
-    ],
-    premium: [
-      { name: 'Premium Music Pro', price: 29.99 },
-      { name: 'Premium Plus', price: 39.99 }
-    ],
-    enterprise: [
-      { name: 'Enterprise Suite', price: 199.99 },
-      { name: 'Enterprise Pro', price: 299.99 }
-    ]
-  }
+  const [errors, setErrors] = useState({})
+
+  useEffect(() => {
+    if (editingPlan) {
+      setFormData({
+        name: editingPlan.name || '',
+        description: editingPlan.description || '',
+        price: editingPlan.price || '',
+        type: editingPlan.type || 'monthly',
+        benefits: editingPlan.benefits && editingPlan.benefits.length > 0 
+          ? editingPlan.benefits 
+          : [''],
+        limitations: editingPlan.limitations && editingPlan.limitations.length > 0 
+          ? editingPlan.limitations 
+          : [''],
+        isActive: editingPlan.isActive !== undefined ? editingPlan.isActive : true
+      })
+    } else {
+      setFormData({
+        name: '',
+        description: '',
+        price: '',
+        type: 'monthly',
+        benefits: [''],
+        limitations: [''],
+        isActive: true
+      })
+    }
+    setErrors({})
+  }, [editingPlan, isOpen])
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -63,79 +62,99 @@ const AddSubscriptionModal = ({ isOpen, onClose, onAddSubscription }) => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }))
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }))
+    }
   }
 
-  const handleTierChange = (e) => {
-    const tier = e.target.value
+  const handleBenefitChange = (index, value) => {
+    const newBenefits = [...formData.benefits]
+    newBenefits[index] = value
+    setFormData(prev => ({ ...prev, benefits: newBenefits }))
+  }
+
+  const handleLimitationChange = (index, value) => {
+    const newLimitations = [...formData.limitations]
+    newLimitations[index] = value
+    setFormData(prev => ({ ...prev, limitations: newLimitations }))
+  }
+
+  const addBenefit = () => {
     setFormData(prev => ({
       ...prev,
-      tier: tier,
-      planName: '',
-      price: ''
+      benefits: [...prev.benefits, '']
     }))
   }
 
-  const handlePlanChange = (e) => {
-    const planName = e.target.value
-    const selectedPlan = plans[formData.tier]?.find(p => p.name === planName)
+  const removeBenefit = (index) => {
     setFormData(prev => ({
       ...prev,
-      planName: planName,
-      price: selectedPlan ? selectedPlan.price : ''
+      benefits: prev.benefits.filter((_, i) => i !== index)
     }))
+  }
+
+  const addLimitation = () => {
+    setFormData(prev => ({
+      ...prev,
+      limitations: [...prev.limitations, '']
+    }))
+  }
+
+  const removeLimitation = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      limitations: prev.limitations.filter((_, i) => i !== index)
+    }))
+  }
+
+  const validate = () => {
+    const newErrors = {}
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Plan name is required'
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required'
+    }
+
+    if (!formData.price || parseFloat(formData.price) <= 0) {
+      newErrors.price = 'Valid price is required'
+    }
+
+    // Filter out empty benefits
+    const validBenefits = formData.benefits.filter(b => b.trim())
+    if (validBenefits.length === 0) {
+      newErrors.benefits = 'At least one benefit is required'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
     
-    if (!formData.userName || !formData.email || !formData.planName || !formData.tier) {
-      alert('Please fill in all required fields')
+    if (!validate()) {
       return
     }
 
-    const nextBillingDate = new Date(formData.startDate)
-    if (formData.billingCycle === 'monthly') {
-      nextBillingDate.setMonth(nextBillingDate.getMonth() + 1)
-    } else {
-      nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1)
-    }
+    // Filter out empty values
+    const validBenefits = formData.benefits.filter(b => b.trim())
+    const validLimitations = formData.limitations.filter(l => l.trim())
 
-    const newSubscription = {
-      id: Date.now(),
-      userName: formData.userName,
-      email: formData.email,
-      planName: formData.planName,
-      tier: formData.tier,
+    const planData = {
+      name: formData.name.trim(),
+      description: formData.description.trim(),
       price: parseFloat(formData.price),
-      billingCycle: formData.billingCycle,
-      status: 'active',
-      startDate: formData.startDate,
-      nextBillingDate: nextBillingDate.toISOString().split('T')[0],
-      autoRenew: formData.autoRenew,
-      features: formData.tier === 'basic' 
-        ? ['Limited Tracks', 'Standard Audio']
-        : formData.tier === 'premium'
-        ? ['Unlimited Tracks', 'HD Audio', 'No Ads']
-        : ['Unlimited Everything', 'Priority Support', 'Custom Branding'],
-      plays: 0,
-      likes: 0
+      type: formData.type,
+      benefits: validBenefits,
+      limitations: validLimitations,
+      isActive: formData.isActive
     }
 
-    onAddSubscription(newSubscription)
-    
-    // Reset form
-    setFormData({
-      userName: '',
-      email: '',
-      planName: '',
-      tier: '',
-      price: '',
-      billingCycle: 'monthly',
-      autoRenew: true,
-      startDate: new Date().toISOString().split('T')[0]
-    })
-    
-    onClose()
+    onSave(planData)
   }
 
   if (!isOpen) return null
@@ -144,26 +163,32 @@ const AddSubscriptionModal = ({ isOpen, onClose, onAddSubscription }) => {
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <div 
-          className=" inset-0 transition-opacity bg-black/60 "
+          className="fixed  transition-opacity bg-black/60 "
           onClick={onClose}
         ></div>
 
-        <div className="inline-block w-full max-w-2xl my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-3xl">
+        <div className="inline-block w-full max-w-3xl my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-3xl">
+          {/* Header */}
           <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 px-8 py-6">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="relative z-10 flex items-center justify-between text-white">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                  <Sparkles className="h-5 w-5" />
+                  <Crown className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold">Add New Subscription</h3>
-                  <p className="text-white/80">Create a subscription for a customer</p>
+                  <h3 className="text-2xl font-bold">
+                    {editingPlan ? 'Edit Subscription Plan' : 'Create Subscription Plan'}
+                  </h3>
+                  <p className="text-white/80">
+                    {editingPlan ? 'Update plan details' : 'Define pricing and features'}
+                  </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-white/20 rounded-xl transition-colors"
+                disabled={loading}
+                className="p-2 hover:bg-white/20 rounded-xl transition-colors disabled:opacity-50"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -173,81 +198,32 @@ const AddSubscriptionModal = ({ isOpen, onClose, onAddSubscription }) => {
             <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Customer Name */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-900">
-                  <User className="inline h-4 w-4 mr-2" />
-                  Customer Name *
-                </label>
-                <input
-                  type="text"
-                  name="userName"
-                  value={formData.userName}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter customer name"
-                  required
-                />
-              </div>
-
-              {/* Email */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-900">
-                  <Mail className="inline h-4 w-4 mr-2" />
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="customer@email.com"
-                  required
-                />
-              </div>
-
-              {/* Tier Selection */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-900">
-                  <Tag className="inline h-4 w-4 mr-2" />
-                  Plan Tier *
-                </label>
-                <select
-                  name="tier"
-                  value={formData.tier}
-                  onChange={handleTierChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  required
-                >
-                  <option value="">Select tier</option>
-                  <option value="basic">Basic</option>
-                  <option value="premium">Premium</option>
-                  <option value="enterprise">Enterprise</option>
-                </select>
-              </div>
-
               {/* Plan Name */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-900">
-                  <Crown className="inline h-4 w-4 mr-2" />
+                  <Tag className="inline h-4 w-4 mr-2" />
                   Plan Name *
                 </label>
-                <select
-                  name="planName"
-                  value={formData.planName}
-                  onChange={handlePlanChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  disabled={!formData.tier}
-                  required
-                >
-                  <option value="">Select plan</option>
-                  {formData.tier && plans[formData.tier]?.map(plan => (
-                    <option key={plan.name} value={plan.name}>{plan.name}</option>
-                  ))}
-                </select>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 bg-gray-50 border rounded-xl text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                    errors.name ? 'border-red-500' : 'border-gray-200'
+                  }`}
+                  placeholder="e.g., Premium Music Pro"
+                  disabled={loading}
+                />
+                {errors.name && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.name}
+                  </p>
+                )}
               </div>
 
               {/* Price */}
@@ -262,82 +238,204 @@ const AddSubscriptionModal = ({ isOpen, onClose, onAddSubscription }) => {
                   value={formData.price}
                   onChange={handleChange}
                   step="0.01"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  min="0"
+                  className={`w-full px-4 py-3 bg-gray-50 border rounded-xl text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                    errors.price ? 'border-red-500' : 'border-gray-200'
+                  }`}
                   placeholder="29.99"
-                  required
+                  disabled={loading}
                 />
+                {errors.price && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.price}
+                  </p>
+                )}
               </div>
 
-              {/* Billing Cycle */}
+              {/* Billing Type */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-900">
                   <Calendar className="inline h-4 w-4 mr-2" />
-                  Billing Cycle *
+                  Billing Type *
                 </label>
                 <select
-                  name="billingCycle"
-                  value={formData.billingCycle}
+                  name="type"
+                  value={formData.type}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  required
+                  disabled={loading}
                 >
                   <option value="monthly">Monthly</option>
                   <option value="yearly">Yearly</option>
                 </select>
               </div>
 
-              {/* Start Date */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-900">
-                  <Calendar className="inline h-4 w-4 mr-2" />
-                  Start Date *
-                </label>
-                <input
-                  type="date"
-                  name="startDate"
-                  value={formData.startDate}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  required
-                />
-              </div>
-
-              {/* Auto Renew */}
+              {/* Status */}
               <div className="space-y-2 flex items-center">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
-                    name="autoRenew"
-                    checked={formData.autoRenew}
+                    name="isActive"
+                    checked={formData.isActive}
                     onChange={handleChange}
                     className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                    disabled={loading}
                   />
                   <div>
                     <span className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                      <RefreshCw className="h-4 w-4" />
-                      Enable Auto-Renew
+                      <CheckCircle className="h-4 w-4" />
+                      Active Plan
                     </span>
-                    <span className="text-xs text-gray-500">Automatically renew subscription</span>
+                    <span className="text-xs text-gray-500">Make this plan available to users</span>
                   </div>
                 </label>
               </div>
             </div>
 
+            {/* Description */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-900">
+                Description *
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows="3"
+                className={`w-full px-4 py-3 bg-gray-50 border rounded-xl text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none ${
+                  errors.description ? 'border-red-500' : 'border-gray-200'
+                }`}
+                placeholder="Full access to all premium tools for a month"
+                disabled={loading}
+              />
+              {errors.description && (
+                <p className="text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.description}
+                </p>
+              )}
+            </div>
+
+            {/* Benefits */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold text-gray-900">
+                  <Sparkles className="inline h-4 w-4 mr-2" />
+                  Benefits * (What's included)
+                </label>
+                <button
+                  type="button"
+                  onClick={addBenefit}
+                  disabled={loading}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 disabled:opacity-50"
+                >
+                  <Plus className="h-3 w-3" />
+                  Add Benefit
+                </button>
+              </div>
+              
+              <div className="space-y-2">
+                {formData.benefits.map((benefit, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={benefit}
+                      onChange={(e) => handleBenefitChange(index, e.target.value)}
+                      className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder={`Benefit ${index + 1} (e.g., Unlimited downloads)`}
+                      disabled={loading}
+                    />
+                    {formData.benefits.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeBenefit(index)}
+                        disabled={loading}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {errors.benefits && (
+                <p className="text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.benefits}
+                </p>
+              )}
+            </div>
+
+            {/* Limitations */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold text-gray-900">
+                  <AlertCircle className="inline h-4 w-4 mr-2" />
+                  Limitations (Optional)
+                </label>
+                <button
+                  type="button"
+                  onClick={addLimitation}
+                  disabled={loading}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 disabled:opacity-50"
+                >
+                  <Plus className="h-3 w-3" />
+                  Add Limitation
+                </button>
+              </div>
+              
+              <div className="space-y-2">
+                {formData.limitations.map((limitation, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={limitation}
+                      onChange={(e) => handleLimitationChange(index, e.target.value)}
+                      className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder={`Limitation ${index + 1} (e.g., Limited team members)`}
+                      disabled={loading}
+                    />
+                    {formData.limitations.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeLimitation(index)}
+                        disabled={loading}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Action Buttons */}
-            <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200">
+            <div className="flex items-center justify-end gap-4 pt-6 border-t border-gray-200">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-6 py-3 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors duration-200"
+                disabled={loading}
+                className="px-6 py-3 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-lg transition-all duration-200 flex items-center gap-2"
+                disabled={loading}
+                className="px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-lg transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Plus className="h-4 w-4" />
-                Add Subscription
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    {editingPlan ? 'Update Plan' : 'Create Plan'}
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -346,4 +444,5 @@ const AddSubscriptionModal = ({ isOpen, onClose, onAddSubscription }) => {
     </div>
   )
 }
+
 export default AddSubscriptionModal

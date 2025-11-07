@@ -25,7 +25,13 @@ const LoginForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    dispatch(login(formData))
+    // Dispatch with type, email, password, and role
+    dispatch(login({
+      email: formData.email,
+      password: formData.password,
+      role: formData.role,
+      fcmToken: '' // Add FCM token if you have push notifications
+    }))
   }
 
   return (
@@ -71,6 +77,7 @@ const LoginForm = () => {
             )}
           </button>
         </div>
+
       </div>
 
       <div>

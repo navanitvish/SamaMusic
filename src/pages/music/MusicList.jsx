@@ -2,145 +2,105 @@ import { useState, useEffect } from 'react'
 import { 
   Search, 
   Plus, 
-  Play, 
-  Pause, 
   Download, 
   Trash2, 
   Edit, 
   Filter,
   Music,
   Volume2,
-  Shuffle,
-  Repeat,
-  MoreVertical,
   Heart,
-  Share2,
-  Disc,
   Headphones,
-  TrendingUp,
   Clock,
-  Users,
-  Star,
   X,
-  Eye
+  Eye,
+  Upload,
+  User,
+  Tag,
+  Calendar,
+  FileAudio,
+  Sparkles,
+  Loader2,
+  AlertCircle,
+  Image as ImageIcon
 } from 'lucide-react'
+import { getMusic, getMusicById, uploadMusic, updateMusic, deleteMusic } from '../../api/api'
 import AddMusic from './AddMusic'
 
-
-
-
+// AddMusic Component
 
 // Main MusicList Component
 const MusicList = () => {
   const [musicList, setMusicList] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filteredMusic, setFilteredMusic] = useState([])
-  const [playingId, setPlayingId] = useState(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [selectedFilter, setSelectedFilter] = useState('all')
-  const [selectedCategory, setSelectedCategory] = useState('album')
+  const [editingMusic, setEditingMusic] = useState(null)
   const [selectedTracks, setSelectedTracks] = useState([])
-
-  const dummyMusic = [
-    {
-      id: 1,
-      title: 'Midnight Dreams',
-      artist: 'Luna Rodriguez',
-      album: 'Neon Nights',
-      genre: 'Electronic',
-      duration: 245,
-      uploadDate: '2024-03-15T10:30:00Z',
-      plays: 15420,
-      likes: 1240,
-      fileName: 'midnight-dreams.mp3'
-    },
-    {
-      id: 2,
-      title: 'Summer Vibes',
-      artist: 'Beach Boys Revival',
-      album: 'Coastal Dreams',
-      genre: 'Pop',
-      duration: 198,
-      uploadDate: '2024-03-10T14:20:00Z',
-      plays: 8734,
-      likes: 892,
-      fileName: 'summer-vibes.wav'
-    },
-    {
-      id: 3,
-      title: 'Urban Flow',
-      artist: 'MC Phoenix',
-      album: 'City Lights',
-      genre: 'Hip Hop',
-      duration: 212,
-      uploadDate: '2024-03-08T16:45:00Z',
-      plays: 23891,
-      likes: 2156,
-      fileName: 'urban-flow.mp3'
-    },
-    {
-      id: 4,
-      title: 'Jazz Café',
-      artist: 'The Smooth Collective',
-      album: 'Late Night Sessions',
-      genre: 'Jazz',
-      duration: 287,
-      uploadDate: '2024-03-05T11:15:00Z',
-      plays: 5643,
-      likes: 423,
-      fileName: 'jazz-cafe.flac'
-    },
-    {
-      id: 5,
-      title: 'Rock Anthem',
-      artist: 'Thunder Strike',
-      album: 'Electric Storm',
-      genre: 'Rock',
-      duration: 234,
-      uploadDate: '2024-03-01T09:30:00Z',
-      plays: 12056,
-      likes: 967,
-      fileName: 'rock-anthem.mp3'
-    }
-  ]
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    setMusicList(dummyMusic)
-    setFilteredMusic(dummyMusic)
+    fetchMusicList()
   }, [])
 
-  useEffect(() => {
-    let filtered = musicList.filter(music =>
-      music.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      music.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      music.genre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      music.album.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-
-    if (selectedFilter !== 'all') {
-      if (selectedCategory === 'album') {
-        filtered = filtered.filter(music => music.album.toLowerCase() === selectedFilter.toLowerCase())
-      } else {
-        filtered = filtered.filter(music => music.genre.toLowerCase() === selectedFilter.toLowerCase())
+  const fetchMusicList = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await getMusic()
+      
+      // Handle different response structures
+      let music = []
+      if (Array.isArray(response)) {
+        music = response
+      } else if (response.data?.data && Array.isArray(response.data.data)) {
+        music = response.data.data
+      } else if (response.data && Array.isArray(response.data)) {
+        music = response.data
+      } else if (response.music && Array.isArray(response.music)) {
+        music = response.music
       }
+      
+      setMusicList(music)
+      setFilteredMusic(music)
+    } catch (err) {
+      console.error('Error fetching music:', err)
+      setError(err.response?.data?.message || err.message || 'Failed to load music')
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
+    const filtered = musicList.filter(music =>
+      music.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      music.artists?.some(artist => artist.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      music.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
     setFilteredMusic(filtered)
-  }, [searchTerm, musicList, selectedFilter, selectedCategory])
+  }, [searchTerm, musicList])
 
-  const handlePlay = (musicId) => {
-    setPlayingId(playingId === musicId ? null : musicId)
+  const handleEdit = (music) => {
+    setEditingMusic(music)
+    setIsAddModalOpen(true)
   }
 
-  const handleDelete = (musicId) => {
-    if (window.confirm('Are you sure you want to delete this track?')) {
-      const updatedMusic = musicList.filter(music => music.id !== musicId)
-      setMusicList(updatedMusic)
+  const handleDelete = async (musicId) => {
+    if (!window.confirm('Are you sure you want to delete this track?')) {
+      return
+    }
+
+    try {
+      await deleteMusic(musicId)
+      await fetchMusicList()
+    } catch (err) {
+      console.error('Error deleting music:', err)
+      alert(err.message || 'Failed to delete music')
     }
   }
 
-  const handleAddMusic = (newMusic) => {
-    setMusicList(prev => [...prev, newMusic])
+  const handleAddOrUpdateMusic = async () => {
+    await fetchMusicList()
   }
 
   const toggleTrackSelection = (trackId) => {
@@ -152,43 +112,11 @@ const MusicList = () => {
   }
 
   const formatDuration = (seconds) => {
+    if (!seconds) return '0:00'
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
-
-  const getGenreColor = (genre) => {
-    const colors = {
-      'Electronic': 'from-cyan-500 to-blue-500',
-      'Pop': 'from-pink-500 to-rose-500',
-      'Hip Hop': 'from-yellow-500 to-orange-500',
-      'Jazz': 'from-purple-500 to-indigo-500',
-      'Rock': 'from-red-500 to-rose-500',
-      'Classical': 'from-emerald-500 to-teal-500',
-      'R&B': 'from-violet-500 to-purple-500',
-      'Country': 'from-amber-500 to-yellow-500',
-      'Latin': 'from-orange-500 to-red-500',
-      'Indie': 'from-green-500 to-emerald-500',
-      'Alternative': 'from-slate-500 to-gray-500',
-      'Blues': 'from-blue-600 to-indigo-600'
-    }
-    return colors[genre] || 'from-gray-500 to-slate-500'
-  }
-
-  const uniqueCategories = selectedCategory === 'album' 
-    ? [...new Set(musicList.map(music => music.album))]
-    : [...new Set(musicList.map(music => music.genre))]
-  
-  const filters = [
-    { value: 'all', label: 'All Tracks', count: musicList.length },
-    ...uniqueCategories.map(category => ({
-      value: category.toLowerCase(),
-      label: category,
-      count: musicList.filter(m => 
-        selectedCategory === 'album' ? m.album === category : m.genre === category
-      ).length
-    }))
-  ]
 
   return (
     <div className="space-y-8 p-6 bg-gray-50 min-h-screen">
@@ -204,14 +132,6 @@ const MusicList = () => {
                   <Music className="h-5 w-5" />
                   <span className="font-semibold">{musicList.length} Tracks</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Headphones className="h-5 w-5" />
-                  <span className="font-semibold">{musicList.reduce((acc, music) => acc + music.plays, 0).toLocaleString()} Total Plays</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Heart className="h-5 w-5" />
-                  <span className="font-semibold">{musicList.reduce((acc, music) => acc + music.likes, 0).toLocaleString()} Likes</span>
-                </div>
               </div>
             </div>
             
@@ -221,7 +141,10 @@ const MusicList = () => {
                 Export Playlist
               </button>
               <button 
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={() => {
+                  setEditingMusic(null)
+                  setIsAddModalOpen(true)
+                }}
                 className="bg-white text-purple-600 hover:bg-white/90 font-semibold px-6 py-2 rounded-xl transition-colors flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
@@ -236,253 +159,201 @@ const MusicList = () => {
       </div>
 
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
-            <button
-              onClick={() => {
-                setSelectedCategory('album')
-                setSelectedFilter('all')
-              }}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                selectedCategory === 'album'
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              By Album
-            </button>
-            <button
-              onClick={() => {
-                setSelectedCategory('genre')
-                setSelectedFilter('all')
-              }}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                selectedCategory === 'genre'
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              By Genre
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between mb-6">
-          <div className="flex items-center gap-3 overflow-x-auto pb-2">
-            {filters.map((filter) => (
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-red-900 mb-1">Error Loading Data</h4>
+              <p className="text-sm text-red-700">{error}</p>
               <button
-                key={filter.value}
-                onClick={() => setSelectedFilter(filter.value)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
-                  selectedFilter === filter.value
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                onClick={fetchMusicList}
+                className="mt-2 text-sm font-medium text-red-600 hover:text-red-700 underline"
               >
-                {filter.label} ({filter.count})
+                Try Again
               </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search tracks, artists, albums..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2.5 w-80 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            <button className="p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors">
-              <Filter className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        {selectedTracks.length > 0 && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-blue-900">
-                {selectedTracks.length} track(s) selected
-              </span>
-              <div className="flex items-center gap-2">
-                <button className="px-3 py-1.5 text-xs font-semibold text-blue-700 bg-white rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1">
-                  <Download className="h-3 w-3" />
-                  Download
-                </button>
-                <button className="px-3 py-1.5 text-xs font-semibold text-red-600 bg-white rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1">
-                  <Trash2 className="h-3 w-3" />
-                  Delete Selected
-                </button>
-              </div>
             </div>
           </div>
         )}
 
-        <div className="overflow-hidden rounded-xl border border-gray-200">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedTracks(filteredMusic.map(m => m.id))
-                        } else {
-                          setSelectedTracks([])
-                        }
-                      }}
-                    />
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Track Details
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Genre
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Duration
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Engagement
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Upload Date
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredMusic.map((music) => (
-                  <tr key={music.id} className="hover:bg-gray-50 transition-colors duration-200 group">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
-                        checked={selectedTracks.includes(music.id)}
-                        onChange={() => toggleTrackSelection(music.id)}
-                      />
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
-                          <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${getGenreColor(music.genre)} flex items-center justify-center shadow-lg`}>
-                            <span className="text-lg font-bold text-white">
-                              {music.title.charAt(0)}
-                            </span>
-                          </div>
-                          {playingId === music.id && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                              <Volume2 className="h-2 w-2 text-white" />
-                            </div>
-                          )}
-                        </div>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="h-12 w-12 text-purple-600 animate-spin mb-4" />
+            <p className="text-gray-600 font-medium">Loading music library...</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search tracks, artists..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-10 py-2.5 w-full bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {selectedTracks.length > 0 && (
+              <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-blue-900">
+                    {selectedTracks.length} track(s) selected
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button className="px-3 py-1.5 text-xs font-semibold text-blue-700 bg-white rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1">
+                      <Download className="h-3 w-3" />
+                      Download
+                    </button>
+                    <button className="px-3 py-1.5 text-xs font-semibold text-red-600 bg-white rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1">
+                      <Trash2 className="h-3 w-3" />
+                      Delete Selected
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="overflow-hidden rounded-xl border border-gray-200">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Description
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredMusic.map((music) => (
+                      <tr key={music._id || music.id} className="hover:bg-gray-50 transition-colors duration-200 group">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
+                            checked={selectedTracks.includes(music._id || music.id)}
+                            onChange={() => toggleTrackSelection(music._id || music.id)}
+                          />
+                        </td>
                         
-                        <div>
-                          <h3 className="text-sm font-semibold text-gray-900">{music.title}</h3>
-                          <p className="text-sm text-gray-500">{music.artist}</p>
-                          <p className="text-xs text-gray-400">{music.album}</p>
-                        </div>
-                      </div>
-                    </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-4">
+                            <div className="relative">
+                              {music.image ? (
+                                <img 
+                                  src={music.image} 
+                                  alt={music.title}
+                                  className="h-12 w-12 rounded-xl object-cover shadow-lg"
+                                />
+                              ) : (
+                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                                  <span className="text-lg font-bold text-white">
+                                    {music.title?.charAt(0) || 'M'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div>
+                              <h3 className="text-sm font-semibold text-gray-900">{music.title}</h3>
+                              <p className="text-xs text-gray-400">Album: {music.albumId}</p>
+                            </div>
+                          </div>
+                        </td>
 
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full text-white bg-gradient-to-r ${getGenreColor(music.genre)}`}>
-                        {music.genre}
-                      </span>
-                    </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap gap-1">
+                            {music.artists && music.artists.length > 0 ? (
+                              music.artists.map((artist, idx) => (
+                                <span 
+                                  key={idx}
+                                  className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800"
+                                >
+                                  {artist}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-sm text-gray-500">No artists</span>
+                            )}
+                          </div>
+                        </td>
 
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-sm text-gray-900">
-                        <Clock className="h-4 w-4 text-gray-400" />
-                        {formatDuration(music.duration)}
-                      </div>
-                    </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-600 max-w-xs truncate">
+                            {music.description || 'No description'}
+                          </p>
+                        </td>
 
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1">
-                          <Headphones className="h-3 w-3 text-gray-400" />
-                          <span className="text-sm font-semibold text-gray-900">
-                            {music.plays.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Heart className="h-3 w-3 text-red-400" />
-                          <span className="text-xs text-gray-500">
-                            {music.likes.toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button 
+                              onClick={() => handleEdit(music)}
+                              className="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(music._id || music.id)}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(music.uploadDate).toLocaleDateString()}
-                    </td>
-
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors">
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(music.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {filteredMusic.length === 0 && (
-          <div className="text-center py-12">
-            <Music className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No tracks found</h3>
-            <p className="text-gray-500 mb-4">Try adjusting your search or filter criteria.</p>
-            <button 
-              onClick={() => setIsAddModalOpen(true)}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-colors flex items-center gap-2 mx-auto"
-            >
-              <Plus className="h-4 w-4" />
-              Add New Track
-            </button>
-          </div>
+            {filteredMusic.length === 0 && !loading && (
+              <div className="text-center py-12">
+                <Music className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No tracks found</h3>
+                <p className="text-gray-500 mb-4">
+                  {searchTerm ? 'Try adjusting your search criteria.' : 'Get started by adding your first track.'}
+                </p>
+                <button 
+                  onClick={() => {
+                    setEditingMusic(null)
+                    setIsAddModalOpen(true)
+                  }}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-colors flex items-center gap-2 mx-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add New Track
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
       <AddMusic 
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAddMusic={handleAddMusic}
+        onClose={() => {
+          setIsAddModalOpen(false)
+          setEditingMusic(null)
+        }}
+        onAddMusic={handleAddOrUpdateMusic}
+        editingMusic={editingMusic}
       />
     </div>
   )
 }
 
-export default MusicList
+export default MusicList;
+                     

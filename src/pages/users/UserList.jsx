@@ -5,130 +5,94 @@ import {
   Edit, 
   Trash2, 
   Eye, 
-  Filter,
-  MoreVertical,
-  UserPlus,
   Crown,
   Shield,
   Star,
-  Calendar,
   Mail,
-  Phone,
   MapPin,
   Activity,
   Users2,
   Download,
-  Upload,
-  Settings,
-  ChevronDown,
   X
 } from 'lucide-react'
 import Button from '../../components/ui/Button'
-import Input from '../../components/ui/Input'
-import { dummyUsers } from '../../data/dummyData'
+import { getUsers } from '../../api/api'
 
 const UserList = () => {
   const [users, setUsers] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filteredUsers, setFilteredUsers] = useState([])
   const [selectedFilter, setSelectedFilter] = useState('all')
-  const [viewMode, setViewMode] = useState('table') // 'table' or 'grid'
   const [selectedUsers, setSelectedUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  // Enhanced dummy data for demo
-  const enhancedUsers = [
-    {
-      id: 1,
-      name: 'Navanit Chen',
-      email: 'anv.chen@email.com',
-      role: 'Premium',
-      status: 'active',
-      avatar: null,
-      location: 'Noida, up',
-      phone: '+1 (555) 123-4567',
-      joinDate: '2024-01-15',
-      lastActivity: '2 hours ago',
-      subscription: 'Premium',
-      totalPlays: 15420,
-      favoriteGenre: 'Electronic',
-      plan: 'Premium'
-    },
-    {
-      id: 2,
-      name: 'Shubham ',
-      email: 'Shubh.son@email.com',
-      role: 'Basic',
-      status: 'active',
-      avatar: null,
-      location: 'Deroia, up',
-      phone: '+1 (555) 234-5678',
-      joinDate: '2024-02-20',
-      lastActivity: '1 day ago',
-      subscription: 'Basic',
-      totalPlays: 8734,
-      favoriteGenre: 'Hip Hop',
-      plan: 'Basic'
-    },
-    {
-      id: 3,
-      name: 'Raza Sofia',
-      email: 'Raza.m@email.com',
-      role: 'Premium',
-      status: 'active',
-      avatar: null,
-      location: 'Ghorkhpur, up',
-      phone: '+1 (555) 345-6789',
-      joinDate: '2024-03-10',
-      lastActivity: '5 minutes ago',
-      subscription: 'Premium',
-      totalPlays: 23891,
-      favoriteGenre: 'Latin',
-      plan: 'Premium'
-    },
-    {
-      id: 4,
-      name: 'Dev Bhaiya',
-      email: 'david.kim@email.com',
-      role: 'Family',
-      status: 'active',
-      avatar: null,
-      location: 'indore, Mp',
-      phone: '+1 (555) 456-7890',
-      joinDate: '2024-01-05',
-      lastActivity: '3 hours ago',
-      subscription: 'Family',
-      totalPlays: 12043,
-      favoriteGenre: 'Indie',
-      plan: 'Family'
-    },
-    {
-      id: 5,
-      name: 'Anish gond',
-      email: 'ansih.w@email.com',
-      role: 'Free',
-      status: 'inactive',
-      avatar: null,
-      location: 'Ahirauli, UP',
-      phone: '+1 (555) 567-8901',
-      joinDate: '2024-02-28',
-      lastActivity: '2 weeks ago',
-      subscription: 'Free',
-      totalPlays: 234,
-      favoriteGenre: 'Pop',
-      plan: 'Free'
-    }
-  ]
-
+  // Fetch users from API on mount
   useEffect(() => {
-    setUsers(enhancedUsers)
-    setFilteredUsers(enhancedUsers)
+    fetchUsersData()
   }, [])
 
+  // Fetch users using imported API function
+  const fetchUsersData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const response = await getUsers()
+      
+      // Handle API response structure: {success: true, data: {...}, message: "..."}
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch users')
+      }
+      
+      // Convert single user object or array to array
+      let usersArray = []
+      if (response.data) {
+        usersArray = Array.isArray(response.data) ? response.data : [response.data]
+      }
+      
+      // Transform API data to match expected format
+      const transformedData = usersArray.map(user => ({
+        id: user._id || user.id,
+        name: user.name || 'Unknown User',
+        email: user.email || '',
+        role: user.role || 'user',
+        status: user.isActive ? 'active' : 'inactive',
+        avatar: user.avatar || user.profilePicture || null,
+        location: user.location || user.city || 'N/A',
+        phone: user.phone || user.phoneNumber || 'N/A',
+        joinDate: user.createdAt || new Date().toISOString(),
+        lastActivity: user.lastActivity ? new Date(user.lastActivity).toLocaleString() : 'Recently',
+        subscription: user.subscription || user.plan || 'Free',
+        totalPlays: user.totalPlays || user.playCount || 0,
+        favoriteGenre: user.favoriteGenre || user.genre || 'Various',
+        plan: user.plan || user.subscription || (user.role === 'admin' ? 'Premium' : 'Free'),
+        // Additional fields from your API
+        isEmailVerified: user.isEmailVerified || false,
+        isMobileVerified: user.isMobileVerified || false,
+        loginType: user.loginType || 'password',
+        currentScreen: user.currentScreen || 'LANDING_SCREEN'
+      }))
+      
+      setUsers(transformedData)
+      setFilteredUsers(transformedData)
+    } catch (err) {
+      setError(err.message || 'Failed to fetch users')
+      console.error('Error fetching users:', err)
+      // Set empty array on error
+      setUsers([])
+      setFilteredUsers([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Filter users based on search and filter
   useEffect(() => {
     let filtered = users.filter(user =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.location.toLowerCase().includes(searchTerm.toLowerCase())
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.location?.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
     if (selectedFilter !== 'all') {
@@ -138,10 +102,19 @@ const UserList = () => {
     setFilteredUsers(filtered)
   }, [searchTerm, users, selectedFilter])
 
-  const handleDeleteUser = (userId) => {
-    if (confirm('Are you sure you want to delete this user?')) {
+  // Delete user
+  const handleDeleteUser = async (userId) => {
+    if (!confirm('Are you sure you want to delete this user?')) return
+    
+    try {
+      // TODO: Add your delete API call here
+      // await deleteUser(userId)
+      
+      // Update local state
       const updatedUsers = users.filter(user => user.id !== userId)
       setUsers(updatedUsers)
+    } catch (err) {
+      alert('Error deleting user: ' + err.message)
     }
   }
 
@@ -153,31 +126,24 @@ const UserList = () => {
     )
   }
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'active': return 'from-green-500 to-emerald-500'
-      case 'inactive': return 'from-gray-500 to-slate-500'
-      case 'suspended': return 'from-red-500 to-rose-500'
-      default: return 'from-blue-500 to-indigo-500'
-    }
-  }
-
   const getPlanColor = (plan) => {
-    switch(plan) {
-      case 'Premium': return 'from-purple-500 to-pink-500'
-      case 'Family': return 'from-emerald-500 to-teal-500'
-      case 'Basic': return 'from-blue-500 to-indigo-500'
-      case 'Free': return 'from-gray-500 to-slate-500'
+    const planLower = plan?.toLowerCase() || 'free'
+    switch(planLower) {
+      case 'premium': return 'from-purple-500 to-pink-500'
+      case 'family': return 'from-emerald-500 to-teal-500'
+      case 'basic': return 'from-blue-500 to-indigo-500'
+      case 'free': return 'from-gray-500 to-slate-500'
       default: return 'from-gray-500 to-slate-500'
     }
   }
 
   const getPlanIcon = (plan) => {
-    switch(plan) {
-      case 'Premium': return Crown
-      case 'Family': return Shield
-      case 'Basic': return Star
-      case 'Free': return Users2
+    const planLower = plan?.toLowerCase() || 'free'
+    switch(planLower) {
+      case 'premium': return Crown
+      case 'family': return Shield
+      case 'basic': return Star
+      case 'free': return Users2
       default: return Users2
     }
   }
@@ -187,6 +153,39 @@ const UserList = () => {
     { value: 'active', label: 'Active', count: users.filter(u => u.status === 'active').length },
     { value: 'inactive', label: 'Inactive', count: users.filter(u => u.status === 'inactive').length },
   ]
+
+  // Loading State
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Loading users...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-8 max-w-md text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <X className="h-8 w-8 text-red-600" />
+          </div>
+          <h3 className="text-xl font-bold text-red-900 mb-2">Error Loading Users</h3>
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button 
+            onClick={fetchUsersData}
+            className="bg-red-600 text-white hover:bg-red-700"
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8">
@@ -215,7 +214,6 @@ const UserList = () => {
                 <Download className="h-4 w-4" />
                 Export
               </Button>
-             
             </div>
           </div>
         </div>
@@ -263,8 +261,6 @@ const UserList = () => {
                 </button>
               )}
             </div>
-
-            
           </div>
         </div>
 
@@ -325,7 +321,7 @@ const UserList = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user, index) => {
+              {filteredUsers.map((user) => {
                 const PlanIcon = getPlanIcon(user.plan)
                 return (
                   <tr key={user.id} className="hover:bg-gray-50 transition-colors duration-200 group">
@@ -343,7 +339,7 @@ const UserList = () => {
                         <div className="relative">
                           <div className="h-12 w-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
                             <span className="text-lg font-bold text-white">
-                              {user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                              {user.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U'}
                             </span>
                           </div>
                           <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
@@ -354,7 +350,7 @@ const UserList = () => {
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="text-sm font-semibold text-gray-900">{user.name}</h3>
-                            {user.plan === 'Premium' && (
+                            {user.plan?.toLowerCase() === 'premium' && (
                               <Crown className="h-4 w-4 text-yellow-500" />
                             )}
                           </div>
@@ -395,7 +391,9 @@ const UserList = () => {
                           {user.status === 'active' ? 'Online' : 'Offline'}
                         </div>
                         <p className="text-xs text-gray-500">Last: {user.lastActivity}</p>
-                        <p className="text-xs text-gray-400">Joined {new Date(user.joinDate).toLocaleDateString()}</p>
+                        <p className="text-xs text-gray-400">
+                          Joined {new Date(user.joinDate).toLocaleDateString()}
+                        </p>
                       </div>
                     </td>
 
@@ -404,7 +402,7 @@ const UserList = () => {
                         <div className="flex items-center gap-1">
                           <Activity className="h-3 w-3 text-gray-400" />
                           <span className="text-sm font-semibold text-gray-900">
-                            {user.totalPlays.toLocaleString()}
+                            {user.totalPlays?.toLocaleString() || 0}
                           </span>
                         </div>
                         <p className="text-xs text-gray-500">Total plays</p>
@@ -412,25 +410,19 @@ const UserList = () => {
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end gap-1 ">
+                      <div className="flex items-center justify-end gap-1">
                         <button className="p-2 text-black hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                           <Eye className="h-4 w-4" />
                         </button>
                         <button className="p-2 text-black hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
                           <Edit className="h-4 w-4" />
                         </button>
-                        {/* <button className="p-2 text-black hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors">
-                          <Mail className="h-4 w-4" />
-                        </button> */}
                         <button 
                           onClick={() => handleDeleteUser(user.id)}
                           className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
-                        {/* <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                          <MoreVertical className="h-4 w-4" />
-                        </button> */}
                       </div>
                     </td>
                   </tr>
@@ -441,72 +433,16 @@ const UserList = () => {
         </div>
 
         {/* Empty State */}
-        {filteredUsers.length === 0 && (
+        {filteredUsers.length === 0 && !loading && (
           <div className="text-center py-12">
             <Users2 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
-            <p className="text-gray-500 mb-4">Try adjusting your search or filter criteria.</p>
-            <Button className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-              <Plus className="h-4 w-4 mr-2" />
-              Add New User
-            </Button>
+            <p className="text-gray-500 mb-4">
+              {searchTerm ? 'Try adjusting your search criteria.' : 'No users available.'}
+            </p>
           </div>
         )}
       </div>
-
-      {/* Bottom Statistics */}
-      {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
-              <Users2 className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">User Growth</h4>
-              <p className="text-sm text-gray-600">This month</p>
-            </div>
-          </div>
-          <div className="text-3xl font-bold text-gray-900 mb-2">+247</div>
-          <div className="flex items-center gap-2 text-sm text-green-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>+12.4% from last month</span>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-200">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-              <Crown className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">Premium Users</h4>
-              <p className="text-sm text-gray-600">Conversion rate</p>
-            </div>
-          </div>
-          <div className="text-3xl font-bold text-gray-900 mb-2">68.7%</div>
-          <div className="flex items-center gap-2 text-sm text-green-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>+5.2% conversion</span>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-200">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center">
-              <Activity className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">Engagement</h4>
-              <p className="text-sm text-gray-600">Daily active users</p>
-            </div>
-          </div>
-          <div className="text-3xl font-bold text-gray-900 mb-2">89.2%</div>
-          <div className="flex items-center gap-2 text-sm text-green-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>+8.1% engagement</span>
-          </div>
-        </div>
-      </div> */}
     </div>
   )
 }
